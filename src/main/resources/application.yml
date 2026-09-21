@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: signaldesk
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/signaldesk}
+    username: ${SPRING_DATASOURCE_USERNAME:signaldesk}
+    password: ${SPRING_DATASOURCE_PASSWORD:signaldesk}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+server:
+  error:
+    include-message: never
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+springdoc:
+  swagger-ui:
+    path: /swagger-ui/index.html

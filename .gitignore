@@ -1,0 +1,15 @@
+target/
+.idea/
+*.iml
+.DS_Store
+.env
+
+# Environment variables
+.env
+*.env
+
+# VS Code
+.vscode/
+
+# Java compiled files
+*.class

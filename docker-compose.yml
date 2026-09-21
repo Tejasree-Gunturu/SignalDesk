@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-signaldesk}
+      POSTGRES_USER: ${POSTGRES_USER:-signaldesk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-signaldesk}
+    ports:
+      - "5432:5432"
+    volumes:
+      - signaldesk-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-signaldesk} -d ${POSTGRES_DB:-signaldesk}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+  app:
+    build: .
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-signaldesk}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-signaldesk}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-signaldesk}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
+  signaldesk-postgres:
