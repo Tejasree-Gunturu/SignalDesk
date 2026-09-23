@@ -1,4 +1,4 @@
-# SignalDesk MVP
+# SignalDesk 
 
 SignalDesk is an API-first incident-management starter built from the 60-day roadmap. This first runnable model covers the reliable core before Kafka, Redis, authentication, and RAG are added: incident creation and lifecycle changes, tenant-scoped queries, audit history, idempotent creates, optimistic locking, assignment strategy, and a transactional outbox.
 
