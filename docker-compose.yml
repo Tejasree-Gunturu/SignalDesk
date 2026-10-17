@@ -1,3 +1,27 @@
+name: signaldesk-extended
+x-app: &app
+  image: signaldesk-extended:local
+  build: .
+  restart: unless-stopped
+  environment: &env
+    SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-signaldesk}
+    SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-signaldesk}
+    SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-signaldesk}
+    KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+    REDIS_HOST: redis
+    ASSIGNMENT_POLICY: ${ASSIGNMENT_POLICY:-round-robin}
+    SIGNALDESK_ADMIN_TOKEN: ${SIGNALDESK_ADMIN_TOKEN:-dev-acme-admin-change-me}
+    SIGNALDESK_VIEWER_TOKEN: ${SIGNALDESK_VIEWER_TOKEN:-dev-acme-viewer-change-me}
+    SIGNALDESK_BETA_TOKEN: ${SIGNALDESK_BETA_TOKEN:-dev-beta-responder-change-me}
+    JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60
+  depends_on:
+    postgres:
+      condition: service_healthy
+    kafka:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -6,24 +30,71 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-signaldesk}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-signaldesk}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - signaldesk-postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-signaldesk} -d ${POSTGRES_DB:-signaldesk}"]
       interval: 5s
       timeout: 5s
-      retries: 12
-  app:
-    build: .
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-signaldesk}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-signaldesk}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-signaldesk}
+      retries: 20
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "${APP_PORT:-8080}:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - signaldesk-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  kafka:
+    image: apache/kafka:3.9.0
+    ports:
+      - "127.0.0.1:9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://:19092,EXTERNAL://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:19092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - signaldesk-kafka:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:19092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 15s
+  app:
+    <<: *app
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+  notification-worker:
+    <<: *app
+    environment:
+      <<: *env
+      SPRING_PROFILES_ACTIVE: notification-worker
+      NOTIFICATION_CHANNEL: ${NOTIFICATION_CHANNEL:-log}
+      NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL:-}
+  escalation-worker:
+    <<: *app
+    environment:
+      <<: *env
+      SPRING_PROFILES_ACTIVE: escalation-worker
+
 volumes:
   signaldesk-postgres:
+  signaldesk-redis:
+  signaldesk-kafka:

@@ -18,15 +18,25 @@ public class Incident {
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
     @Version @Column(nullable = false) private long version;
+    @Column(name = "sla_due_at") private Instant slaDueAt;
+    @Column(name = "escalated_at") private Instant escalatedAt;
     protected Incident() { }
     private Incident(UUID id, String tenantId, String title, String serviceName, String description, Severity severity, String assignedTo, Instant now) {
         this.id=id; this.tenantId=tenantId; this.title=title; this.serviceName=serviceName; this.description=description;
         this.severity=severity; this.status=IncidentStatus.OPEN; this.assignedTo=assignedTo; this.createdAt=now; this.updatedAt=now;
+        this.slaDueAt = now.plusSeconds(switch (severity) { case CRITICAL -> 300; case HIGH -> 900; case MEDIUM -> 3600; case LOW -> 14400; });
     }
     public static Incident open(IncidentId id, String tenantId, String title, String serviceName, String description, Severity severity, String assignedTo, Instant now) { return new Incident(id.value(), tenantId, title, serviceName, description, severity, assignedTo, now); }
     public void acknowledge(String actor, Instant now) { requireStatus(IncidentStatus.OPEN, "Only an open incident can be acknowledged"); status=IncidentStatus.ACKNOWLEDGED; assignedTo=actor; updatedAt=now; }
     public void resolve(Instant now) { if (status != IncidentStatus.OPEN && status != IncidentStatus.ACKNOWLEDGED) throw new InvalidTransitionException("Only an open or acknowledged incident can be resolved"); status=IncidentStatus.RESOLVED; updatedAt=now; }
     public void close(Instant now) { requireStatus(IncidentStatus.RESOLVED, "Only a resolved incident can be closed"); status=IncidentStatus.CLOSED; updatedAt=now; }
     private void requireStatus(IncidentStatus expected, String message) { if (status != expected) throw new InvalidTransitionException(message); }
+    public boolean escalate(Instant now) {
+        if (status != IncidentStatus.OPEN || escalatedAt != null || slaDueAt == null || slaDueAt.isAfter(now)) return false;
+        escalatedAt = now; updatedAt = now;
+        return true;
+    }
+    public Instant getSlaDueAt() { return slaDueAt; }
+    public Instant getEscalatedAt() { return escalatedAt; }
     public UUID getId() { return id; } public String getTenantId() { return tenantId; } public String getTitle() { return title; } public String getServiceName() { return serviceName; } public String getDescription() { return description; } public Severity getSeverity() { return severity; } public IncidentStatus getStatus() { return status; } public String getAssignedTo() { return assignedTo; } public Instant getCreatedAt() { return createdAt; } public Instant getUpdatedAt() { return updatedAt; } public long getVersion() { return version; }
 }

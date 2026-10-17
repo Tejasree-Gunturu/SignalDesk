@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 import java.util.UUID;
 public interface IncidentRepository extends JpaRepository<Incident, UUID> {
+    @org.springframework.data.jpa.repository.Query("select i.version from Incident i where i.id=:id and i.tenantId=:tenant")
+    Optional<Long> findVersion(UUID id, String tenant);
+    long countByTenantIdAndAssignedToAndStatusIn(String tenantId, String assignedTo, java.util.Collection<IncidentStatus> states);
     Optional<Incident> findByIdAndTenantId(UUID id, String tenantId);
     Page<Incident> findByTenantIdAndStatusAndSeverity(String tenantId, IncidentStatus status, Severity severity, Pageable pageable);
     Page<Incident> findByTenantIdAndStatus(String tenantId, IncidentStatus status, Pageable pageable);

@@ -1,0 +1,7 @@
+signaldesk:
+  outbox:
+    enabled: false
+  consumer:
+    enabled: true
+  dispatcher:
+    enabled: true

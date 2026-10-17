@@ -1,0 +1,44 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:signaldesk;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  kafka:
+    bootstrap-servers: localhost:1
+    admin:
+      auto-create: false
+signaldesk:
+  kafka:
+    enabled: false
+    topic: incident-events
+  outbox:
+    enabled: false
+  consumer:
+    enabled: false
+  dispatcher:
+    enabled: false
+  escalation:
+    enabled: false
+  redis:
+    enabled: false
+  auth:
+    accounts:
+      - username: maya
+        tenant-id: acme
+        role: ADMIN
+        token: test-admin
+      - username: reader
+        tenant-id: acme
+        role: VIEWER
+        token: test-viewer
+      - username: responder
+        tenant-id: beta
+        role: RESPONDER
+        token: test-beta

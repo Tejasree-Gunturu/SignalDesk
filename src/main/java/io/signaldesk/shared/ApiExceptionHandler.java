@@ -11,6 +11,8 @@ import java.time.*;
 import java.util.*;
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    ResponseEntity<ApiError> malformedJson(Exception e) { return error(HttpStatus.BAD_REQUEST,"Malformed JSON or invalid enum value",Map.of()); }
     private final Clock clock; public ApiExceptionHandler(Clock clock){this.clock=clock;}
     @ExceptionHandler(IncidentNotFoundException.class) ResponseEntity<ApiError> notFound(IncidentNotFoundException e){return error(HttpStatus.NOT_FOUND,e.getMessage(),Map.of());}
     @ExceptionHandler(InvalidTransitionException.class) ResponseEntity<ApiError> invalidTransition(InvalidTransitionException e){return error(HttpStatus.CONFLICT,e.getMessage(),Map.of());}

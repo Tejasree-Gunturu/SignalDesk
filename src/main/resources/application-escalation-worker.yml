@@ -1,0 +1,5 @@
+signaldesk:
+  outbox:
+    enabled: false
+  escalation:
+    enabled: true
